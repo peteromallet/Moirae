@@ -220,3 +220,7 @@ Camera directives control zoom and pan during the video. They can be:
 | `demo/compositor.py` | GIF frame reader, camera crop, ffmpeg encoding |
 | `demo/camera.py` | Keyframe resolution and interpolation |
 | `demo/scenes/` | Scene handlers (conversation, action) |
+
+## Adding text overlays to the rendered video
+
+Moirae itself doesn't composite captions or a wordmark onto the finished MP4. To do that, run the rendered output through ArtAgents' timeline + Remotion compositor — see the **"Adding overlays to a rendered video"** section in `~/Documents/reigh-workspace/ArtAgents/SKILL.md`.
