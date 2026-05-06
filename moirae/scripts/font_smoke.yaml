@@ -1,0 +1,67 @@
+# Font smoke-test screenplay.
+#
+# Renders every problematic glyph category Moirae's built-in skins reach for,
+# in roughly five seconds, so a maintainer can confirm a font has the
+# coverage the pipeline expects without sitting through a full ~7-minute
+# render.
+#
+# Run with: python -m moirae fonts test [--font NAME] [--skin NAME]
+
+title: "Moirae Font Smoke Test"
+skin: "ares"           # Most glyph-heavy skin (default override happens in CLI)
+typing_speed: 0.005    # Very fast — we just want pixels for inspection
+pause_between: 0.1
+
+output:
+  width: 1920
+  height: 1080
+  final_width: 960
+  final_height: 540
+  fps: 30
+  font_size: 22
+  font_family: "Menlo"
+
+scenes:
+  - action: clear
+
+  - action: type_command
+    prefix: "~ $ "
+    command: "moirae fonts test"
+
+  - action: pause
+    duration: 0.3
+
+  - user: "Show every glyph category the built-in skins reach for."
+    thinking_time: 0.2
+    pre_pause: 0.05
+    post_pause: 0.1
+    tools:
+      - icon: "⚔"
+        verb: "scan"
+        detail: "fonts/coverage.ttf"
+        duration: "0.2s"
+        delay: 0.05
+      - icon: "⛨"
+        verb: "guard"
+        detail: "fallback chain"
+        duration: "0.2s"
+        delay: 0.05
+    response: |
+      **Box-drawing & block** (banner_logo):
+      `█ ╔ ╗ ═ ║ ╚ ╝ ▀ ▄ ▌`
+
+      **Braille** (ares banner_hero):
+      `⠀⠀⣤⣿⣦⢀⣸⣷⡀`
+
+      **Dingbats / symbols** (ares spinner, response_label):
+      `⚔ ⛨ ▲ ⌁ ⟪ ⟫ ⚕`
+
+      **Arrows** (prompts, response_label):
+      `❯ → ← ↑ ↓`
+
+      **Math / misc**:
+      `≈ ÷ × ± ° ✓ ✗`
+
+      *Italic* and **bold** monospace text should render cleanly. Any
+      tofu boxes (□ with `?`) above mean the font is missing those glyphs —
+      swap `font_family` or skin before authoring a real screenplay.

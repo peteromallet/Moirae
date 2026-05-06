@@ -29,5 +29,5 @@ packages = ["moirae", "moirae.scenes", "moirae.fonts"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-moirae = ["scripts/*.yaml"]
+moirae = ["scripts/*.yaml", "scripts/font_smoke.yaml"]
 "moirae.fonts" = ["*.ttf", "OFL.txt"]

@@ -124,6 +124,12 @@ def composite_frames(
     output_w &= ~1
     output_h &= ~1
 
+    # Quality preset: env-var hook so smoke / preview subcommands can speed
+    # this stage up without changing the public API.
+    import os
+    preset = os.environ.get("MOIRAE_X264_PRESET", "fast")
+    crf = os.environ.get("MOIRAE_X264_CRF", "20")
+
     ffmpeg_cmd = [
         "ffmpeg", "-y",
         "-f", "rawvideo",
@@ -132,8 +138,8 @@ def composite_frames(
         "-r", str(fps),
         "-i", "pipe:0",
         "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "20",
+        "-preset", preset,
+        "-crf", crf,
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
         str(output_path),

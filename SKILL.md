@@ -38,6 +38,27 @@ python -m demo demo/scripts/example.yaml -o demo.mp4 --skin ares
 python -m demo demo/scripts/example.yaml -o demo.mp4 --dry-run
 ```
 
+## Verify your font setup before authoring
+
+Skins use Braille, dingbats, and box-drawing glyphs that not every monospace font covers. Before authoring a screenplay or picking a custom `font_family` / `skin`, run:
+
+```
+python -m moirae fonts test
+```
+
+This renders a 5-second smoke clip exercising every glyph category the built-in skins reach for. Inspect the result for tofu boxes (□ with ?). If any glyph is broken, swap the font or skin before you spend minutes on a full render.
+
+```
+python -m moirae fonts test --font "Menlo"   # check a specific font
+python -m moirae fonts test --skin ares      # check a specific skin's glyphs
+```
+
+For a quick preview of a real screenplay's first few seconds (avoids waiting for a full render to spot layout issues):
+
+```
+python -m moirae preview my-screenplay.yaml --duration 8
+```
+
 ## CLI Options
 
 | Flag | Description |
