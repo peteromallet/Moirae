@@ -25,8 +25,9 @@ Homepage = "https://github.com/peteromallet/Moirae"
 moirae = "moirae.__main__:main"
 
 [tool.setuptools]
-packages = ["moirae", "moirae.scenes"]
+packages = ["moirae", "moirae.scenes", "moirae.fonts"]
 include-package-data = true
 
 [tool.setuptools.package-data]
 moirae = ["scripts/*.yaml"]
+"moirae.fonts" = ["*.ttf", "OFL.txt"]

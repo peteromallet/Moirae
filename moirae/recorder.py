@@ -94,10 +94,32 @@ def render_agg(
     """
     agg = require_tool("agg")
 
+    # First-run: ensure the bundled Nerd Font is discoverable so the
+    # fallback chain below actually has a font with Braille + dingbat coverage.
+    from moirae.fonts import ensure_bundled_font_installed
+    ensure_bundled_font_installed()
+
+    # agg's --font-family is a comma-separated fallback chain (per-codepoint).
+    # Append broadly-covering families so glyphs missing in the primary
+    # (Braille, dingbats, box drawing) fall back to a font that has them.
+    fallback_chain = [
+        font_family,
+        "JetBrainsMono Nerd Font Mono",
+        "JetBrainsMono Nerd Font",
+        "Symbols Nerd Font Mono",
+        "Apple Symbols",
+        "DejaVu Sans",
+    ]
+    seen, dedup = set(), []
+    for f in fallback_chain:
+        if f and f not in seen:
+            seen.add(f)
+            dedup.append(f)
+
     cmd = [
         agg,
         f"--font-size={font_size}",
-        f"--font-family={font_family}",
+        f"--font-family={','.join(dedup)}",
         f"--fps-cap={fps}",
     ]
     if theme:
