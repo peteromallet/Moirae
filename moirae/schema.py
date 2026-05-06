@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ── Camera ──────────────────────────────────────────────────────────────
@@ -103,6 +103,30 @@ class OutputConfig(BaseModel):
     bg_image: Optional[str] = None       # Path to background image
     bg_opacity: float = 1.0              # Terminal opacity (0.0–1.0) over background
     bg_color: Optional[str] = None       # Background fill color (hex, e.g. "#fdf1de")
+
+    # Terminal grid dimensions used for asciinema recording. Bump terminal_rows
+    # for screenplays with many scenes so cumulative content doesn't scroll
+    # off the buffer (each Q+A is roughly 12–15 rows).
+    terminal_cols: int = 200
+    terminal_rows: int = 120
+
+    @field_validator("terminal_cols")
+    @classmethod
+    def _check_cols(cls, v: int) -> int:
+        if v < 80:
+            raise ValueError("terminal_cols must be >= 80")
+        if v > 400:
+            raise ValueError("terminal_cols must be <= 400")
+        return v
+
+    @field_validator("terminal_rows")
+    @classmethod
+    def _check_rows(cls, v: int) -> int:
+        if v < 40:
+            raise ValueError("terminal_rows must be >= 40")
+        if v > 500:
+            raise ValueError("terminal_rows must be <= 500")
+        return v
 
 
 # ── Top-level screenplay ───────────────────────────────────────────────

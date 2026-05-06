@@ -42,34 +42,51 @@ def _auto_track_keyframes(
     timing,
     total_rows: int,
 ) -> None:
-    """Emit tracking keyframes at user_end and response_start."""
-    # Follow cursor after submit
-    t = timing.markers.get("user_end")
-    if t is not None:
-        auto = _resolve_auto_y("user_end", timing, total_rows)
-        if auto is not None:
-            keyframes.append(CameraKeyframe(
-                t=t, zoom=cam.zoom, x=cam.x, y=auto,
-                duration=0.3, ease="ease-out",
-            ))
+    """Emit tracking keyframes that follow the cursor through the exchange.
 
-    # Center on Q+A midpoint when response appears
-    t = timing.markers.get("response_start")
-    top = timing.markers.get("_cursor_user_start")
-    bottom = timing.markers.get("_cursor_response_end")
-    if t is not None and top is not None and bottom is not None:
-        midpoint = (top + bottom) / 2.0
-        y = min(midpoint / total_rows, 1.0)
+    Three keyframes per Q+A:
+      1. user_end  — pan to the cursor's row right after the user prompt is done.
+      2. response_start — hold (no jump). We deliberately do NOT pre-position
+         the camera at the predicted Q+A midpoint; that creates a visible
+         lead where the camera moves before the response actually renders.
+      3. response_end — pan smoothly to the cursor's row at response end,
+         with duration spanning the entire response render. The compositor
+         interpolates linearly through this window, so the active line
+         stays roughly under the viewport center as it gets typed.
+    """
+    user_end_t = timing.markers.get("user_end")
+    user_end_row = timing.markers.get("_cursor_user_end")
+    response_start_t = timing.markers.get("response_start")
+    response_end_t = timing.markers.get("response_end")
+    response_end_row = timing.markers.get("_cursor_response_end")
+
+    if user_end_t is not None and user_end_row is not None:
         keyframes.append(CameraKeyframe(
-            t=t, zoom=cam.zoom, x=cam.x, y=y,
+            t=user_end_t,
+            zoom=cam.zoom, x=cam.x,
+            y=min(user_end_row / total_rows, 1.0) if total_rows > 0 else 0.5,
             duration=0.3, ease="ease-out",
+        ))
+
+    if (
+        response_start_t is not None
+        and response_end_t is not None
+        and response_end_row is not None
+    ):
+        track_duration = max(response_end_t - response_start_t, 0.3)
+        keyframes.append(CameraKeyframe(
+            t=response_end_t,
+            zoom=cam.zoom, x=cam.x,
+            y=min(response_end_row / total_rows, 1.0) if total_rows > 0 else 0.5,
+            duration=track_duration,
+            ease="linear",
         ))
 
 
 def resolve_keyframes(
     screenplay: Screenplay,
     manifest: TimingManifest,
-    total_rows: int = 80,
+    total_rows: int = 120,
 ) -> List[CameraKeyframe]:
     """Resolve camera directives from screenplay scenes against timing manifest.
 
@@ -161,13 +178,41 @@ def resolve_keyframes(
         culled.append(kf)
     keyframes = culled
 
-    # Ensure there's always a starting keyframe at t=0
+    # Ensure there's always a starting keyframe at t=0.
+    # The default y centers the viewport on the top portion of the grid so
+    # the first ~visible_rows of content land on screen at zoom 1.0. With
+    # the new default 120-row grid (vs the old 80) the previous y=0.34
+    # would crop the banner; recompute relative to the grid size.
     if not keyframes or keyframes[0].t > 0.01:
         keyframes.insert(0, CameraKeyframe(
-            t=0.0, zoom=1.0, x=0.5, y=0.34, duration=0.0, ease="linear",
+            t=0.0, zoom=1.0, x=0.5,
+            y=_default_camera_y(total_rows),
+            duration=0.0, ease="linear",
         ))
 
     return keyframes
+
+
+def _default_camera_y(total_rows: int) -> float:
+    """Default y for an unconfigured opening keyframe.
+
+    Centers on the top portion of the grid so the first ~visible_rows of
+    content (banner / first prompt) land on screen at zoom 1.0.
+
+    Heuristic: at typical agg char metrics (~17 px wide, ~40 px tall) and a
+    200-col × N-row grid, the GIF is taller than 16:9 once N ≳ 48. The
+    compositor then crops to the output aspect ratio, leaving roughly 48
+    rows visible at zoom 1.0. We pin the viewport center at (visible/2),
+    so the topmost ~visible_rows of the grid stay on screen.
+
+    For grids smaller than the visible window, fall back to y=0.5 (centred).
+    """
+    if total_rows <= 0:
+        return 0.5
+    visible_rows_estimate = 48
+    if total_rows <= visible_rows_estimate:
+        return 0.5
+    return (visible_rows_estimate / 2.0) / total_rows
 
 
 def _resolve_marker_time(marker: str, timing) -> Optional[float]:

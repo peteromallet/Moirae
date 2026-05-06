@@ -61,11 +61,13 @@ def run_pipeline(
     else:
         raise RuntimeError("Screenplay has no _source_path — cannot record")
 
-    # Calculate terminal size for recording.
-    # 48 rows with 200 cols produces a ~16:9 GIF, matching the default
-    # 1280x720 output so the full terminal is visible at 1.0x zoom.
-    cols = 200
-    rows = 80
+    # Terminal grid dimensions for asciinema recording. Configurable via the
+    # screenplay's `output.terminal_cols` / `output.terminal_rows`. The
+    # default 200×120 grid leaves enough vertical room for ~5–10 Q&A
+    # exchanges before the scrollback buffer starts dropping rows (which
+    # would otherwise pin the camera to the bottom).
+    cols = out.terminal_cols
+    rows = out.terminal_rows
 
     if dry_run:
         _print_dry_run(
@@ -159,7 +161,10 @@ def _print_dry_run(
     print("=== DRY RUN ===\n")
 
     print("Step 1: Record with asciinema")
-    print(f"  asciinema rec --overwrite --cols={200} --rows={80} \\")
+    print(
+        f"  asciinema rec --overwrite "
+        f"--cols={out.terminal_cols} --rows={out.terminal_rows} \\"
+    )
     print(f"    --command '{' '.join(player_cmd)}' \\")
     print(f"    {cast_path}\n")
 

@@ -91,10 +91,16 @@ output:
   bg_image: "path/to/bg.jpg" # Background image (optional)
   bg_color: "#fdf1de"        # Background fill color (optional)
   bg_opacity: 0.85           # Terminal opacity over background (0.0–1.0)
+  terminal_cols: 200         # Terminal grid width  (>= 80, <= 400)
+  terminal_rows: 120         # Terminal grid height (>= 40, <= 500)
 
 scenes:
   # ... scene list (see Scene Types below)
 ```
+
+### Terminal grid sizing
+
+`output.terminal_rows` controls how tall the underlying asciinema buffer is. The default is 120 rows — enough for ~5–10 Q+A exchanges before older content scrolls off the top. If your screenplay has many scenes, bump `terminal_rows` so the conversation doesn't overflow the buffer (each Q+A is roughly 12–15 rows). Hitting the buffer top causes the terminal to scroll, which pins the auto-tracking camera at the bottom of the visible viewport. `terminal_cols` defaults to 200; widen it only if a single line of content needs more horizontal room than the default.
 
 ### Theme and Skin Interaction
 
