@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 
+from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich import box as rich_box
@@ -130,27 +131,65 @@ def show_tool_line(tool: dict, ctx: PlaybackContext):
 
 # ── Response rendering ──────────────────────────────────────────────────
 
-def show_response(text: str, label: str, ctx: PlaybackContext):
-    """Show agent response in a Rich panel using skin colors."""
+def show_response(text: str, label: str, ctx: PlaybackContext, line_delay: float = 0.06):
+    """Show agent response in a Rich panel using skin colors.
+
+    Renders the Panel(Markdown(...)) once into a recording Console, then
+    streams the captured ANSI lines to stdout one at a time with a small
+    sleep between lines. This makes the cursor advance gradually so the
+    auto-tracking camera in camera.py can interpolate smoothly downward
+    instead of teleporting once the response appears all at once.
+    """
     border_color = ctx.skin.get_color("response_border", "#FFD700")
-    ctx.console.print(Panel(
+    panel = Panel(
         Markdown(text),
         title=f"[bold]{label}[/bold]",
         title_align="left",
         border_style=border_color,
         box=rich_box.HORIZONTALS,
         padding=(1, 2),
-    ))
-    # Estimate panel height accounting for line wrapping within the panel.
-    # Panel chrome: top border + top padding + bottom padding + bottom border = 4
-    # Content width: console width minus panel border (2) minus padding (4) = -6
+    )
+
+    # Render the panel into a recording console at the same width as the
+    # live console so wrapping matches. We then replay the styled output
+    # line-by-line. This preserves all Rich styling (bold, code blocks,
+    # bullet markers, panel border) while letting the cursor advance
+    # gradually as each row is emitted.
     cols = ctx.console.width or 200
-    content_width = max(cols - 6, 20)
-    content_lines = 0
-    for line in text.strip().split("\n"):
-        content_lines += max(1, (len(line) + content_width - 1) // content_width)
-    panel_lines = content_lines + 4
-    ctx.newline(panel_lines)
+    rec = Console(
+        record=True,
+        force_terminal=True,
+        color_system=ctx.console.color_system or "truecolor",
+        width=cols,
+        file=open("/dev/null", "w"),  # don't print to real stdout
+    )
+    try:
+        rec.print(panel)
+        rendered = rec.export_text(styles=True, clear=True)
+    finally:
+        try:
+            rec.file.close()
+        except Exception:
+            pass
+
+    # Rich tends to terminate the rendered block with a trailing newline;
+    # split and drop a single empty trailing element so we don't emit an
+    # extra blank row beyond the panel's bottom border.
+    lines = rendered.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+
+    # Cap line_delay sanely; very long responses with very long delays
+    # would drag the recording out forever.
+    delay = max(0.0, float(line_delay))
+
+    for line in lines:
+        sys.stdout.write(line)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+        ctx.newline(1)
+        if delay:
+            time.sleep(delay)
 
 
 # ── Scene handler ──────────────────────────────────────────────────────
@@ -231,7 +270,13 @@ def play_conversation(scene: ConversationScene, ctx: PlaybackContext):
     # --- Response ---
     if scene.response:
         ctx.mark(scene_timing, "response_start")
-        show_response(scene.response, label=response_label, ctx=ctx)
+        response_speed = scene.response_speed if scene.response_speed is not None else 0.06
+        show_response(
+            scene.response,
+            label=response_label,
+            ctx=ctx,
+            line_delay=response_speed,
+        )
         ctx.mark(scene_timing, "response_end")
 
     time.sleep(scene.post_pause)

@@ -47,6 +47,10 @@ class ConversationScene(BaseModel):
     pause_between: Optional[float] = None
     pre_pause: float = 0.5
     post_pause: float = 0.5
+    # Per-line delay (seconds) when streaming the agent response.
+    # Smaller = faster reveal. None = use the default (0.06s/line).
+    # Setting this to 0 effectively restores the old "all at once" behaviour.
+    response_speed: Optional[float] = None
 
     # Camera directives (Phase 3)
     camera: Optional[CameraDirective] = None
