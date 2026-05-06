@@ -132,18 +132,19 @@ def composite_frames(
         "-r", str(fps),
         "-i", "pipe:0",
         "-c:v", "libx264",
-        "-preset", "slow",
-        "-crf", "18",
+        "-preset", "fast",
+        "-crf", "20",
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
         str(output_path),
     ]
 
+    stderr_log = open(str(output_path) + ".ffmpeg.log", "wb")
     proc = subprocess.Popen(
         ffmpeg_cmd,
         stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=stderr_log,
     )
 
     # Load background at GIF resolution so it zooms with the terminal
@@ -154,9 +155,14 @@ def composite_frames(
     _process_gif(proc, gif_path, keyframes, output_w, output_h, fps, bg, theme_bg_color)
     proc.stdin.close()
     proc.wait()
+    stderr_log.close()
 
     if proc.returncode != 0:
-        stderr = proc.stderr.read() if proc.stderr else b""
+        try:
+            with open(str(output_path) + ".ffmpeg.log", "rb") as f:
+                stderr = f.read()
+        except Exception:
+            stderr = b""
         raise RuntimeError(
             f"ffmpeg encoding failed (exit {proc.returncode}):\n"
             f"{stderr.decode(errors='replace')}"

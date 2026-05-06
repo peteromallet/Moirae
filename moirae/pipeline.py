@@ -26,14 +26,14 @@ def run_pipeline(
     """
     from moirae.compositor import composite_frames
     from moirae.recorder import render_agg, record_asciinema
-    from moirae.skin_engine import load_skin
+    from moirae.skin_engine import load_skin, AGG_THEME_BG
 
     out = screenplay.output
 
     # Resolve terminal theme from skin (screenplay YAML can override)
     skin = load_skin(skin_override or screenplay.skin)
     terminal_theme = out.theme if out.theme is not None else skin.terminal_theme
-    terminal_bg_rgb = skin.terminal_bg_rgb
+    terminal_bg_rgb = AGG_THEME_BG.get(terminal_theme, skin.terminal_bg_rgb)
     work_dir = output_path.parent
     stem = output_path.stem
 
